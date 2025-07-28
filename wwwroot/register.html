@@ -1,0 +1,53 @@
+﻿<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Регистрация</title>
+</head>
+<body>
+    <h2>Форма регистрации</h2>
+    <form id="registerForm">
+        <label>Имя:</label><br>
+        <input type="text" name="name" required><br><br>
+
+        <label>Email:</label><br>
+        <input type="email" name="email" required><br><br>
+
+        <label>Пароль:</label><br>
+        <input type="password" name="password" required><br><br>
+
+        <button type="submit">Зарегистрироваться</button>
+    </form>
+
+    <div id="result"></div>
+
+    <script>
+        document.getElementById('registerForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const form = e.target;
+            const data = {
+                name: form.name.value,
+                email: form.email.value,
+                password: form.password.value
+            };
+
+            const response = await fetch('/api/Users/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+
+            const result = await response.text();
+
+            if (response.ok) {
+                // ✅ Успешная регистрация → перенаправление
+                window.location.href = '/table.html';
+            } else {
+                // ❌ Ошибка → выводим сообщение
+                document.getElementById('result').innerText = result;
+            }
+        });
+    </script>
+
+</body>
+</html>

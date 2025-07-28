@@ -1,0 +1,27 @@
+﻿@using WebApplication.Models
+@model List<User>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Blocked</th>
+            <!--<th>Is Deleted</th>-->
+            <th>Last login time</th>
+            <th>Registered at</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var user in Model)
+        {
+            <tr>
+                <td>@user.Name</td>
+                <td>@user.Email</td>
+                <td>@user.IsBlocked</td>
+                <td>@user.LastLoginTime.ToString("dd.MM.yyyy")</td>
+                <td>@user.RegisteredAt.ToString("dd.MM.yyyy")</td>
+            </tr>
+        }
+    </tbody>
+</table>
