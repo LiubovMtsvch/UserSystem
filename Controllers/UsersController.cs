@@ -28,7 +28,7 @@ namespace WebApplication.Controllers
         {
             if (await _context.Users.AnyAsync(u => u.Email == dto.Email))
             {
-                return Conflict("Пользователь с таким email уже существует.");
+                return Conflict("User with such email already exists");
             }
 
             var user = new User
@@ -43,17 +43,17 @@ namespace WebApplication.Controllers
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
 
-            return Ok("Регистрация успешна!");
+            return Ok("Register was successful");
         }
 
-        // 🔍 Проверка состояния пользователя
+        //condition of user
         private async Task<bool> IsBlockedOrDeleted(string email)
         {
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
             return user == null || user.IsBlocked /* || user.IsDeleted */;
         }
 
-        // 📤 Получить всех пользователей (отсортировано по входу)
+        //sorted by register data
         [AllowAnonymous]
         [HttpGet("all")]
 
@@ -74,12 +74,12 @@ namespace WebApplication.Controllers
             return Ok(users);
         }
 
-        // 🔍 Получить одного по Email
+        //get one user by email
         [HttpGet("{email}")]
         public async Task<IActionResult> GetUserByEmail(string email)
         {
             if (await IsBlockedOrDeleted(email))
-                return Forbid("Пользователь заблокирован или не найден.");
+                return Forbid("User is blocked or not found");
 
             var user = await _context.Users
                 .Where(u => u.Email == email)
@@ -93,12 +93,12 @@ namespace WebApplication.Controllers
                 .FirstOrDefaultAsync();
 
             if (user == null)
-                return NotFound("Пользователь не найден");
+                return NotFound("User not found");
 
             return Ok(user);
         }
 
-        // 🚫 Блокировка
+        //block
         [HttpPost("block")]
         public async Task<IActionResult> BlockUsers([FromBody] List<int> userIds)
         {
@@ -108,10 +108,10 @@ namespace WebApplication.Controllers
                 user.IsBlocked = true;
             }
             await _context.SaveChangesAsync();
-            return Ok("Пользователи заблокированы.");
+            return Ok("User iss blocked");
         }
 
-        // 🔓 Разблокировка
+        //unblock
         [HttpPost("unblock")]
         public async Task<IActionResult> UnblockUsers([FromBody] List<int> userIds)
         {
@@ -121,17 +121,17 @@ namespace WebApplication.Controllers
                 user.IsBlocked = false;
             }
             await _context.SaveChangesAsync();
-            return Ok("Пользователи разблокированы.");
+            return Ok("User was unblocked");
         }
 
-        // 🗑 Удаление пользователей
+        //delete user
         [HttpPost("delete")]
         public async Task<IActionResult> DeleteUsers([FromBody] List<int> userIds)
         {
             var users = await _context.Users.Where(u => userIds.Contains(u.Id)).ToListAsync();
             _context.Users.RemoveRange(users);
             await _context.SaveChangesAsync();
-            return Ok("Пользователи удалены.");
+            return Ok("User was deleted");
         }
     }
 }

@@ -2,8 +2,8 @@
 {
     public class RegisterUserDto
     {
-        public string Name { get; set; }     // Имя пользователя
-        public string Email { get; set; }    // Email как логин
-        public string Password { get; set; } // Пароль (перед хэшированием)
+        public string Name { get; set; }    
+        public string Email { get; set; }    
+        public string Password { get; set; } 
     }
 }

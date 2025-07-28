@@ -8,13 +8,13 @@ namespace WebApplication.Data
     public class AppDbContext : DbContext
     {
         public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
-        public DbSet<User> Users => Set<User>();//создние базы данных
+        public DbSet<User> Users => Set<User>();//creating db
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<User>()
                 .HasIndex(u => u.Email)
-                .IsUnique(); // <-- Уникальный индекс по требованию задания
+                .IsUnique(); //unique index
 
             base.OnModelCreating(modelBuilder);
         }
