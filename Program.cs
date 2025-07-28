@@ -12,6 +12,19 @@ var builder = Microsoft.AspNetCore.Builder.WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+    .AddCookie(options =>
+    {
+        options.LoginPath = "/login";             // путь на случай неавторизованного доступа
+        options.AccessDeniedPath = "/denied";     // путь при запрете доступа
+        options.ExpireTimeSpan = TimeSpan.FromDays(7); // срок жизни cookie
+        options.SlidingExpiration = true;
+    });
+
+// ? Авторизация (включение атрибута [Authorize])
+builder.Services.AddAuthorization();
+
+
 // Swagger
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();

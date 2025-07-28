@@ -8,11 +8,9 @@ using WebApplication.DTOs;
 namespace WebApplication.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
-
-    [Authorize]
+    [Route("api/users")] // фиксированный маршрут
+    
     public class UsersController : ControllerBase
-
     {
         private readonly AppDbContext _context;
 
@@ -21,68 +19,74 @@ namespace WebApplication.Controllers
             _context = context;
         }
 
-        // 📥 Регистрация (доступна без авторизации)
         [AllowAnonymous]
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] RegisterUserDto dto)
         {
-            if (await _context.Users.AnyAsync(u => u.Email == dto.Email))
+            var existingUser = await _context.Users.FirstOrDefaultAsync(u => u.Email == dto.Email);
+
+            if (existingUser != null)
             {
-                return Conflict("User with such email already exists");
+                if (existingUser.IsBlocked)
+                    return Forbid("User is blocked and cannot register.");
+
+                if (!existingUser.IsDeleted)
+                    return Conflict("User with such email already exists.");
             }
 
             var user = new User
             {
                 Name = dto.Name,
                 Email = dto.Email,
+                PasswordHash = dto.Password,
                 RegisteredAt = DateTime.UtcNow,
                 LastLoginTime = DateTime.UtcNow,
-                IsBlocked = false
+                IsBlocked = false,
+                IsDeleted = false
             };
 
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
 
-            return Ok("Register was successful");
+            return Ok("Registration was successful");
         }
 
-        //condition of user
         private async Task<bool> IsBlockedOrDeleted(string email)
         {
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
-            return user == null || user.IsBlocked /* || user.IsDeleted */;
+            return user == null || user.IsBlocked || user.IsDeleted;
         }
 
-        //sorted by register data
+       
+
         [AllowAnonymous]
         [HttpGet("all")]
-
         public async Task<IActionResult> GetAllUsers()
         {
             var users = await _context.Users
-                .Where(u => !u.IsBlocked /* && !u.IsDeleted */)
+                .Where(u => !u.IsDeleted)
                 .OrderByDescending(u => u.LastLoginTime)
                 .Select(u => new
                 {
                     u.Id,
                     u.Name,
                     u.Email,
-                    u.RegisteredAt
+                    u.RegisteredAt,
+                    Status = u.IsBlocked ? "Blocked" : "Active"
                 })
                 .ToListAsync();
 
             return Ok(users);
         }
 
-        //get one user by email
-        [HttpGet("{email}")]
+        [HttpGet("email/{email}")]
         public async Task<IActionResult> GetUserByEmail(string email)
         {
             if (await IsBlockedOrDeleted(email))
-                return Forbid("User is blocked or not found");
+                return Forbid("User is blocked or not found.");
 
             var user = await _context.Users
-                .Where(u => u.Email == email)
+                .Where(u => u.Email == email && !u.IsDeleted)
                 .Select(u => new
                 {
                     u.Id,
@@ -98,40 +102,99 @@ namespace WebApplication.Controllers
             return Ok(user);
         }
 
-        //block
         [HttpPost("block")]
         public async Task<IActionResult> BlockUsers([FromBody] List<int> userIds)
         {
-            var users = await _context.Users.Where(u => userIds.Contains(u.Id)).ToListAsync();
+            if (userIds == null || !userIds.Any())
+                return BadRequest("No user IDs provided.");
+
+            var users = await _context.Users
+                .Where(u => userIds.Contains(u.Id) && !u.IsDeleted)
+                .ToListAsync();
+
+            if (!users.Any())
+                return NotFound("Users not found.");
+
             foreach (var user in users)
-            {
                 user.IsBlocked = true;
-            }
+
             await _context.SaveChangesAsync();
-            return Ok("User iss blocked");
+            return Ok("Users have been blocked.");
         }
 
-        //unblock
+        [AllowAnonymous]
+        [HttpPost("login")]
+        public async Task<IActionResult> Login([FromBody] LoginUserDto dto)
+        {
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == dto.Email);
+
+            if (user == null)
+                return Unauthorized("Пользователь не найден.");
+
+            if (user.IsBlocked || user.IsDeleted)
+                return Unauthorized("Пользователь не может войти.");
+
+            if (user.PasswordHash != dto.Password)
+                return Unauthorized("Неверный пароль.");
+
+            user.LastLoginTime = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                Message = "Вход выполнен успешно",
+                Redirect = "/table.html", // 👈 Фронт переходит сюда
+                User = new
+                {
+                    user.Id,
+                    user.Name,
+                    user.Email
+                }
+            });
+        }
+
+
         [HttpPost("unblock")]
         public async Task<IActionResult> UnblockUsers([FromBody] List<int> userIds)
         {
-            var users = await _context.Users.Where(u => userIds.Contains(u.Id)).ToListAsync();
+            if (userIds == null || !userIds.Any())
+                return BadRequest("No user IDs provided.");
+
+            var users = await _context.Users
+                .Where(u => userIds.Contains(u.Id) && !u.IsDeleted)
+                .ToListAsync();
+
+            if (!users.Any())
+                return NotFound("Users not found.");
+
             foreach (var user in users)
-            {
                 user.IsBlocked = false;
-            }
+
             await _context.SaveChangesAsync();
-            return Ok("User was unblocked");
+            return Ok("Users have been unblocked.");
         }
 
-        //delete user
         [HttpPost("delete")]
         public async Task<IActionResult> DeleteUsers([FromBody] List<int> userIds)
         {
-            var users = await _context.Users.Where(u => userIds.Contains(u.Id)).ToListAsync();
-            _context.Users.RemoveRange(users);
+            if (userIds == null || userIds.Count == 0)
+                return BadRequest("No user IDs provided.");
+
+            var users = await _context.Users
+                .Where(u => userIds.Contains(u.Id) && !u.IsDeleted)
+                .ToListAsync();
+
+            if (users.Count == 0)
+                return NotFound("Users not found.");
+
+            foreach (var user in users)
+            {
+                user.IsDeleted = true;
+                Console.WriteLine($"User ID {user.Id} marked as deleted.");
+            }
+
             await _context.SaveChangesAsync();
-            return Ok("User was deleted");
+            return Ok("Users have been deleted.");
         }
     }
 }
