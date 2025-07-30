@@ -8,10 +8,10 @@
     <link rel="stylesheet" href="/css/styles.css" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/alphardex/aqua.css@master/dist/aqua.min.css" />
 </head>
-<body>
+<body class="page-register">
     <form class="login-form" id="registerForm" action="javascript:void(0);">
 
-        <h1>Welcome!</h1>
+        <h1>Sign up</h1>
         <div class="form-input-material">
             <input type="text" name="name" id="name" placeholder=" " autocomplete="off" class="form-control-material" required />
             <label for="username">Username</label>
@@ -28,14 +28,14 @@
         <button type="submit" class="btn btn-primary btn-ghost">Sign up</button>
 
         <div class="link-row">
-            <div class="forgot-password-inside">
-                <a href="#">Forgot password?</a>
-            </div>
             <div class="have-account">
                 <a href="login.html">Log in</a>
             </div>
         </div>
-    </form>
+        <div id="successMessage" style="color: #7abaff; font-size: 0.9em; margin-top: 10px; display: none;">
+            Register was successful.
+        </div>
+</form>
 
 
 
@@ -62,23 +62,31 @@
                 const result = await response.text();
 
                 if (response.ok) {
-                    window.location.href = '/table.html';
+                    const successMsg = document.getElementById('successMessage');
+                    successMsg.textContent = 'Register was successful.';
+                    successMsg.style.display = 'block';
+
+                    setTimeout(() => {
+                        window.location.href = '/table.html';
+                    }, 2000);
+
+                } else if (response.status === 403 && result.includes('User is blocked')) {
+                    emailError.textContent = 'This user is blocked and cannot register.';
+                } else if (response.status === 409 && result.includes('email already exists')) {
+                    emailError.textContent = 'User with such email already exists.';
+                } else if (response.status === 200 && result.includes('email already exists')) {
+                    emailError.textContent = 'User with such email already exists.';
                 } else {
-                    if (result.includes('email already exists')) {
-                        emailError.textContent = 'User with such email already exists';
-                    } else {
-                        emailError.textContent = 'Registration error. Please try again.';
-                    }
+                    emailError.textContent = 'Registration error. Please try again.';
                 }
             } catch (err) {
                 emailError.textContent = 'Network error. Please try again later.';
             }
         });
 
-        //delete when you input new email
+        // Clear email error message on input
         document.getElementById('email').addEventListener('input', () => {
-            const emailError = document.getElementById('emailError');
-            emailError.textContent = '';
+            document.getElementById('emailError').textContent = '';
         });
     </script>
 

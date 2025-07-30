@@ -8,11 +8,12 @@
     <link rel="stylesheet" href="/css/styles.css" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/alphardex/aqua.css@master/dist/aqua.min.css" />
 </head>
-<body>
+<body class="page-login">
+
     <form class="login-form" id="loginForm" action="javascript:void(0);">
 
         <h1>Log in</h1>
-        
+
 
         <div class="form-input-material">
             <input type="email" name="email" id="email" placeholder=" " autocomplete="off" class="form-control-material" required />
@@ -27,17 +28,17 @@
 
         <div class="link-row">
             <div class="forgot-password-inside">
-                <a href="#">Forgot password?</a>
+                <a href="/reset-request.html">Forgot password?</a>
             </div>
-      
+
         </div>
     </form>
-
 
 
     <script>
         document.getElementById('loginForm').addEventListener('submit', async (e) => {
             e.preventDefault();
+
             const form = e.target;
             const emailError = document.getElementById('emailError');
             emailError.textContent = '';
@@ -52,7 +53,12 @@
                     })
                 });
 
-                const result = await response.json();
+                let result;
+                try {
+                    result = await response.json(); // json parse
+                } catch (jsonErr) {
+                    result = { message: 'Error' };
+                }
 
                 if (response.ok) {
                     window.location.href = result.redirect || '/table.html';
@@ -69,6 +75,7 @@
             emailError.textContent = '';
         });
     </script>
+
 
 
 </body>

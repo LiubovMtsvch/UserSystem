@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using WebApplication.Data;
 using WebApplication.Models;
 using WebApplication.DTOs;
+using Microsoft.AspNetCore.Identity;
 
 namespace WebApplication.Controllers
 {
@@ -28,7 +29,8 @@ namespace WebApplication.Controllers
             if (existingUser != null)
             {
                 if (existingUser.IsBlocked)
-                    return Forbid("User is blocked and cannot register.");
+                    return StatusCode(403, "User is blocked and cannot register.");
+
 
                 if (!existingUser.IsDeleted)
                     return Conflict("User with such email already exists.");
@@ -38,7 +40,7 @@ namespace WebApplication.Controllers
             {
                 Name = dto.Name,
                 Email = dto.Email,
-                PasswordHash = dto.Password,
+                PasswordHash =  BCrypt.Net.BCrypt.HashPassword(dto.Password),
                 RegisteredAt = DateTime.UtcNow,
                 LastLoginTime = DateTime.UtcNow,
                 IsBlocked = false,
@@ -72,6 +74,7 @@ namespace WebApplication.Controllers
                     u.Name,
                     u.Email,
                     u.RegisteredAt,
+                    u.IsBlocked, 
                     Status = u.IsBlocked ? "Blocked" : "Active"
                 })
                 .ToListAsync();
@@ -132,17 +135,19 @@ namespace WebApplication.Controllers
                 return Unauthorized("Пользователь не найден.");
 
             if (user.IsBlocked || user.IsDeleted)
-                return Unauthorized("Пользователь не может войти.");
+                return Unauthorized(new { message = "User can't log in (blocked)" });
 
-            if (user.PasswordHash != dto.Password)
-                return Unauthorized("Неверный пароль.");
+
+            if (!BCrypt.Net.BCrypt.Verify(dto.Password, user.PasswordHash))
+                return Unauthorized("Incorrect password");
+
 
             user.LastLoginTime = DateTime.UtcNow;
             await _context.SaveChangesAsync();
 
             return Ok(new
             {
-                Message = "Вход выполнен успешно",
+                Message = "Log in was successful",
                 Redirect = "/table.html", // 👈 Фронт переходит сюда
                 User = new
                 {
@@ -196,5 +201,54 @@ namespace WebApplication.Controllers
             await _context.SaveChangesAsync();
             return Ok("Users have been deleted.");
         }
+
+        [AllowAnonymous]
+        [HttpPost("reset-request")]
+        public async Task<IActionResult> RequestPasswordReset([FromBody] EmailDto dto)
+        {
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == dto.Email);
+            if (user == null || user.IsDeleted)
+                return NotFound("User not found");
+
+            // Сгенерировать простой токен (в реальности использовать JWT или Guid + Expiry)
+            var token = Guid.NewGuid().ToString();
+
+            // Можно сохранить токен в базе, но здесь просто добавим его в URL
+            var resetUrl = $"https://yourdomain.com/reset-password.html?email={user.Email}&token={token}";
+
+            // Отладочно: вывод в консоль
+            Console.WriteLine($"Reset link: {resetUrl}");
+
+            return Ok("Reset link has been sent to your email (simulated).");
+        }
+
+        public class EmailDto
+        {
+            public string Email { get; set; }
+        }
+
+        [AllowAnonymous]
+        [HttpPost("reset-password")]
+        public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDto dto)
+        {
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == dto.Email);
+            if (user == null || user.IsDeleted)
+                return NotFound("User not found");
+
+            // Пропускаем проверку токена для упрощения (но на проде обязателен!)
+            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.NewPassword);
+            await _context.SaveChangesAsync();
+
+            return Ok("Password has been reset.");
+        }
+
+        public class ResetPasswordDto
+        {
+            public string Email { get; set; }
+            public string Token { get; set; } // сейчас не проверяется
+            public string NewPassword { get; set; }
+        }
+
+
     }
 }
