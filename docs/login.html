@@ -1,0 +1,82 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Log in</title>
+    <link rel="stylesheet" href="/css/styles.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/alphardex/aqua.css@master/dist/aqua.min.css" />
+</head>
+<body class="page-login">
+
+    <form class="login-form" id="loginForm" action="javascript:void(0);">
+
+        <h1>Log in</h1>
+
+
+        <div class="form-input-material">
+            <input type="email" name="email" id="email" placeholder=" " autocomplete="off" class="form-control-material" required />
+            <label for="email">Email</label>
+            <div id="emailError" style="color: red; font-size: 0.9em; margin-top: 4px;"></div>
+        </div>
+        <div class="form-input-material">
+            <input type="password" name="password" id="password" placeholder=" " autocomplete="off" class="form-control-material" required />
+            <label for="password">Password</label>
+        </div>
+        <button type="submit" class="btn btn-primary btn-ghost">Log in</button>
+
+        <div class="link-row">
+            <div class="forgot-password-inside">
+                <a href="/reset-request.html">Forgot password?</a>
+            </div>
+
+        </div>
+    </form>
+
+
+    <script>
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const form = e.target;
+            const emailError = document.getElementById('emailError');
+            emailError.textContent = '';
+
+            try {
+                const response = await fetch('/api/Users/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email: form.email.value,
+                        password: form.password.value
+                    })
+                });
+
+                let result;
+                try {
+                    result = await response.json(); // json parse
+                } catch (jsonErr) {
+                    result = { message: 'Error' };
+                }
+
+                if (response.ok) {
+                    window.location.href = result.redirect || '/table.html';
+                } else {
+                    emailError.textContent = result.message || 'Login failed.';
+                }
+            } catch (err) {
+                emailError.textContent = 'Server error. Please try again.';
+            }
+        });
+
+        document.getElementById('email').addEventListener('input', () => {
+            const emailError = document.getElementById('emailError');
+            emailError.textContent = '';
+        });
+    </script>
+
+
+
+</body>
+</html>

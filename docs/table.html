@@ -1,0 +1,120 @@
+﻿<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8" />
+    <title>List of users</title>
+
+    <link rel="stylesheet"
+          href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css"
+          integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm"
+          crossorigin="anonymous" />
+    <link rel="stylesheet" href="/css/styles.css" />
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" />
+</head>
+<body class="page-users">
+
+    <div class="container-fluid">
+        <div class="user-panel">
+            <h1 class="mb-4">Users</h1>
+
+            <div id="toolbar">
+                <button id="blockBtn" class="btn btn-dark">
+                    <i class="bi bi-lock-fill mr-1"></i> Block
+                </button>
+                <button id="unblockBtn" class="btn btn-dark">
+                    <i class="bi bi-unlock-fill mr-1"></i> Unblock
+                </button>
+                <button id="deleteBtn" class="btn btn-dark">
+                    <i class="bi bi-trash-fill mr-1"></i> Delete
+                </button>
+            </div>
+
+
+            <div class="table-wrapper">
+                <table class="table table-bordered" id="userTable">
+                    <thead class="thead-dark">
+                        <tr>
+                            <th>
+                                <input type="checkbox" id="selectAll" />  Select
+                            </th>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Last seen</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Загрузка пользователей
+        async function loadUsers() {
+            const response = await fetch("/api/users/all");
+            const users = await response.json();
+            const tbody = document.querySelector("#userTable tbody");
+            tbody.innerHTML = "";
+
+            users.forEach(u => {
+                const statusText = u.isBlocked ? "Blocked" : "Active";
+                const statusClass = u.isBlocked ? "text-danger font-weight-bold" : "text-success font-weight-bold";
+
+                const row = `<tr>
+                <td><input type="checkbox" class="user-checkbox" value="${u.id}"></td>
+                <td>${u.name}</td>
+                <td>${u.email}</td>
+                <td>${new Date(u.lastLogin || u.registeredAt).toLocaleString()}</td>
+                <td><span class="${statusClass}">${statusText}</span></td>
+                </tr>`;
+
+                tbody.innerHTML += row;
+            });
+        }
+
+        loadUsers();
+
+        // Выделить/снять всех
+        document.addEventListener("change", function (e) {
+            if (e.target.id === "selectAll") {
+                const checked = e.target.checked;
+                document.querySelectorAll(".user-checkbox").forEach(cb => cb.checked = checked);
+            }
+        });
+
+        // Обработка действий
+        async function modifyUsers(action) {
+            const selectedIds = Array.from(document.querySelectorAll(".user-checkbox:checked"))
+                .map(cb => parseInt(cb.value));
+
+            //if (selectedIds.length === 0) {
+            //    alert("Выберите хотя бы одного пользователя.");
+            //    return;
+            //}
+
+            try {
+                const response = await fetch(`/api/users/${action}`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(selectedIds)
+                });
+
+                const result = await response.text();
+                await loadUsers(); // обновить таблицу
+            } catch (error) {
+                console.error("Ошибка при выполнении запроса:", error.message);
+            }
+        }
+
+        document.getElementById("blockBtn").onclick = () => modifyUsers("block");
+        document.getElementById("unblockBtn").onclick = () => modifyUsers("unblock");
+        document.getElementById("deleteBtn").onclick = () => modifyUsers("delete");
+    </script>
+
+</body>
+</html>

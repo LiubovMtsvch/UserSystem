@@ -1,0 +1,95 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Registration</title>
+    <link rel="stylesheet" href="/css/styles.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/alphardex/aqua.css@master/dist/aqua.min.css" />
+</head>
+<body class="page-register">
+    <form class="login-form" id="registerForm" action="javascript:void(0);">
+
+        <h1>Sign up</h1>
+        <div class="form-input-material">
+            <input type="text" name="name" id="name" placeholder=" " autocomplete="off" class="form-control-material" required />
+            <label for="username">Username</label>
+        </div>
+        <div class="form-input-material">
+            <input type="email" name="email" id="email" placeholder=" " autocomplete="off" class="form-control-material" required />
+            <label for="email">Email</label>
+            <div id="emailError" style="color: red; font-size: 0.9em; margin-top: 4px;"></div>
+        </div>
+        <div class="form-input-material">
+            <input type="password" name="password" id="password" placeholder=" " autocomplete="off" class="form-control-material" required />
+            <label for="password">Password</label>
+        </div>
+        <button type="submit" class="btn btn-primary btn-ghost">Sign up</button>
+
+        <div class="link-row">
+            <div class="have-account">
+                <a href="login.html">Log in</a>
+            </div>
+        </div>
+        <div id="successMessage" style="color: #7abaff; font-size: 0.9em; margin-top: 10px; display: none;">
+            Register was successful.
+        </div>
+</form>
+
+
+
+    <script>
+        document.getElementById('registerForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const form = e.target;
+            const data = {
+                name: form.name.value,
+                email: form.email.value,
+                password: form.password.value,
+            };
+
+            const emailError = document.getElementById('emailError');
+            emailError.textContent = '';
+
+            try {
+                const response = await fetch('/api/Users/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data),
+                });
+
+                const result = await response.text();
+
+                if (response.ok) {
+                    const successMsg = document.getElementById('successMessage');
+                    successMsg.textContent = 'Register was successful.';
+                    successMsg.style.display = 'block';
+
+                    setTimeout(() => {
+                        window.location.href = '/table.html';
+                    }, 2000);
+
+                } else if (response.status === 403 && result.includes('User is blocked')) {
+                    emailError.textContent = 'This user is blocked and cannot register.';
+                } else if (response.status === 409 && result.includes('email already exists')) {
+                    emailError.textContent = 'User with such email already exists.';
+                } else if (response.status === 200 && result.includes('email already exists')) {
+                    emailError.textContent = 'User with such email already exists.';
+                } else {
+                    emailError.textContent = 'Registration error. Please try again.';
+                }
+            } catch (err) {
+                emailError.textContent = 'Network error. Please try again later.';
+            }
+        });
+
+        // Clear email error message on input
+        document.getElementById('email').addEventListener('input', () => {
+            document.getElementById('emailError').textContent = '';
+        });
+    </script>
+
+
+</body>
+</html>
