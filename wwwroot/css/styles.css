@@ -241,7 +241,7 @@ label {
     transform: scale(1.2);
 }
 
-/* ✅ Адаптивность: перестроение таблицы на узких экранах */
+
 @media (max-width: 768px) {
 .table {
     font-size: 14px;
